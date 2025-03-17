@@ -17,6 +17,15 @@ from sklearn.tree import DecisionTreeClassifier
 from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
 from gensim.models.doc2vec import Doc2Vec, TaggedDocument
 from tqdm import tqdm
+import tensorflow_hub as hub
+import tensorflow as tf
 
 import numpy as np
 import pandas as pd
+import nltk
+from nltk.tokenize import word_tokenize
+from sklearn.feature_extraction.text import TfidfVectorizer, CountVectorizer
+from sklearn.preprocessing import OneHotEncoder
+from sklearn.model_selection import train_test_split
+
+# nltk.download('punkt')

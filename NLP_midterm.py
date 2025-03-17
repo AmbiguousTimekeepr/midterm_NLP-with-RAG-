@@ -1,7 +1,8 @@
 from dependencies import *
+from TextProcessor import TextProcessor
 
 # Đọc dữ liệu từ file CSV
-df = pd.read_csv("sports_dataset.csv")
+df = pd.read_csv("datasets\generated_soccer_questions.csv")
 
 # Chuyển thành DataFrame
 # df = pd.DataFrame(corpus, columns=["text", "label"])
@@ -10,20 +11,20 @@ df = pd.read_csv("sports_dataset.csv")
 print("Dữ liệu mẫu:")
 print(df.head())
 
-# Lưu vào file CSV
-# df.to_csv("sports_dataset_v2.csv", index=False)
-
 # Tiền xử lý văn bản
-np.random.shuffle(df.values)
-df["clean_text"] = df["text"].str.lower().str.replace(r"[{}]".format(string.punctuation), "", regex=True).str.replace(r"\d+", "", regex=True)
-df["clean_text"] = df["clean_text"].apply(lambda x: word_tokenize(x, format="text"))
-
-# Biểu diễn bằng TF-IDF để giảm overfitting
-vectorizer = TfidfVectorizer(max_features=100)
-X_bow = vectorizer.fit_transform(df["clean_text"])
-y = df["label"].astype(str)
-
-X_train, X_test, y_train, y_test = train_test_split(X_bow, y, test_size=0.3, random_state=42, stratify=y)
+processor = TextProcessor(df)
+    
+X_tfidf, y_tfidf = processor.tfidf_vectorizer()
+X_bow, y_bow = processor.bag_of_words_vectorizer()
+X_one_hot, y_one_hot = processor.one_hot_encoding()
+X_elmo, y_elmo = processor.elmo_embeddings()
+    
+X_train, X_test, y_train, y_test = train_test_split(X_bow, y_bow, test_size=0.3, random_state=42, stratify=y_bow)
+    
+print("TF-IDF Shape:", X_tfidf.shape)
+print("BoW Shape:", X_bow.shape)
+print("One-Hot Shape:", X_one_hot.shape)
+print("ELMo Shape:", X_elmo.shape)
 
 # Huấn luyện Naive Bayes với Laplace smoothing
 nb_model = MultinomialNB(alpha=0.1)
@@ -53,7 +54,7 @@ print(classification_report(y_test, y_pred_dt))
 tagged_data = [TaggedDocument(words=text.split(), tags=[str(i)]) for i, text in enumerate(df["clean_text"])]
 d2v_model = Doc2Vec(tagged_data, vector_size=100, window=5, min_count=2, workers=4, epochs=30)
 X_d2v = np.array([d2v_model.infer_vector(text.split()) for text in df["clean_text"]])
-X_train_d2v, X_test_d2v, y_train_d2v, y_test_d2v = train_test_split(X_d2v, y, test_size=0.3, random_state=42, stratify=y)
+X_train_d2v, X_test_d2v, y_train_d2v, y_test_d2v = train_test_split(X_d2v, y_bow, test_size=0.3, random_state=42, stratify=y_bow)
 
 # Huấn luyện với Doc2Vec
 lr_d2v = LogisticRegression(max_iter=1000, C=0.5)

@@ -73,17 +73,6 @@ class TextProcessor:
         return one_hot_encoded, self.y
 
 
-    def elmo_embeddings(self):
-        def elmo_vectors(texts):
-            embeddings = []
-            batch_size = 10  # Process in smaller batches to avoid memory issues
-            for i in range(0, len(texts), batch_size):
-                batch = texts[i : i + batch_size]
-                elmo_out = self.elmo_model.signatures["default"](tf.convert_to_tensor(batch))["elmo"]
-                embeddings.extend(elmo_out.numpy())
-            return np.array(embeddings)
-
-        return elmo_vectors(self.df["clean_text"].tolist()), self.y
 
 
 # Đọc dữ liệu từ file CSV
@@ -91,7 +80,7 @@ df = pd.read_csv("generated_soccer_questions.csv")
 
 # Chuyển thành DataFrame
 # df = pd.DataFrame(corpus, columns=["text", "label"])
-df = df.sample(frac=0.5, random_state=42)  # Lấy 50% dữ liệu
+df = df.sample(frac=0.8, random_state=42)  # Lấy 50% dữ liệu
 df.reset_index(drop=True, inplace=True)
 
 # Hiển thị một số dòng của tập dữ liệu

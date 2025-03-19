@@ -2,7 +2,7 @@ from dependencies import *
 from TextProcessor import TextProcessor
 
 # Đọc dữ liệu từ file CSV
-df = pd.read_csv("datasets\generated_soccer_questions.csv")
+df = pd.read_csv("generated_soccer_questions.csv")
 
 # Chuyển thành DataFrame
 # df = pd.DataFrame(corpus, columns=["text", "label"])

@@ -26,6 +26,10 @@ import nltk
 from nltk.tokenize import word_tokenize
 from sklearn.feature_extraction.text import TfidfVectorizer, CountVectorizer
 from sklearn.preprocessing import OneHotEncoder
+<<<<<<< Updated upstream
 from sklearn.model_selection import train_test_split
 
 # nltk.download('punkt')
+=======
+from sklearn.model_selection import train_test_split
+>>>>>>> Stashed changes

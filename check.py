@@ -37,8 +37,10 @@ from nltk.tokenize import word_tokenize
 from sklearn.feature_extraction.text import TfidfVectorizer, CountVectorizer
 from sklearn.preprocessing import OneHotEncoder
 from sklearn.model_selection import train_test_split
+import os
 
-# nltk.download('punkt')
+nltk.download('punkt', download_dir='/usr/local/nltk_data')
+os.environ['NLTK_DATA'] = "/usr/local/nltk_data"
 
 """# Bước 2: Tiền xử lý văn bản"""
 
@@ -53,7 +55,7 @@ class TextProcessor:
         self.df["clean_text"] = self.df["text"].str.lower()
         self.df["clean_text"] = self.df["clean_text"].str.replace(r"[{}]".format(string.punctuation), "", regex=True)
         self.df["clean_text"] = self.df["clean_text"].str.replace(r"\d+", "", regex=True)
-        # self.df["clean_text"] = self.df["clean_text"].apply(lambda x: " ".join(word_tokenize(x)))
+        self.df["clean_text"] = self.df["clean_text"].apply(lambda x: " ".join(word_tokenize(x)))
 
     def tfidf_vectorizer(self, max_features=100):
         vectorizer = TfidfVectorizer(max_features=max_features)
@@ -66,16 +68,23 @@ class TextProcessor:
         return X_bow, self.y
 
     def one_hot_encoding(self):
-        encoder = OneHotEncoder(sparse_output=False)
-        one_hot_encoded = encoder.fit_transform(self.df[["clean_text"]])
+        encoder = OneHotEncoder(sparse=False)
+        one_hot_encoded = encoder.fit_transform(self.y.values.reshape(-1, 1))
         return one_hot_encoded, self.y
+
 
     def elmo_embeddings(self):
         def elmo_vectors(texts):
-            return self.elmo_model.signatures["default"](tf.convert_to_tensor(texts))["elmo"]
+            embeddings = []
+            batch_size = 10  # Process in smaller batches to avoid memory issues
+            for i in range(0, len(texts), batch_size):
+                batch = texts[i : i + batch_size]
+                elmo_out = self.elmo_model.signatures["default"](tf.convert_to_tensor(batch))["elmo"]
+                embeddings.extend(elmo_out.numpy())
+            return np.array(embeddings)
 
-        elmo_embeddings = elmo_vectors(self.df["clean_text"].tolist())
-        return elmo_embeddings.numpy(), self.y
+        return elmo_vectors(self.df["clean_text"].tolist()), self.y
+
 
 # Đọc dữ liệu từ file CSV
 df = pd.read_csv("generated_soccer_questions.csv")
@@ -108,7 +117,7 @@ print("ELMo Shape:", X_elmo.shape)
 
 # Huấn luyện Naive Bayes với Laplace smoothing
 nb_model = MultinomialNB(alpha=0.1)
-nb_model.fit(X_train, y_train)
+nb_model.fit(np.abs(X_train), y_train)
 y_pred_nb = nb_model.predict(X_test)
 nb_acc = accuracy_score(y_test, y_pred_nb)
 print("Naive Bayes Accuracy:", nb_acc)
@@ -138,9 +147,11 @@ print(classification_report(y_test, y_pred_dt))
 
 # Biểu diễn bằng Doc2Vec
 tagged_data = [TaggedDocument(words=text.split(), tags=[str(i)]) for i, text in enumerate(df["clean_text"])]
-d2v_model = Doc2Vec(tagged_data, vector_size=100, window=5, min_count=2, workers=4, epochs=30)
+d2v_model = Doc2Vec(tagged_data, vector_size=100, window=5, min_count=1, workers=4, epochs=30)
 X_d2v = np.array([d2v_model.infer_vector(text.split()) for text in df["clean_text"]])
-X_train_d2v, X_test_d2v, y_train_d2v, y_test_d2v = train_test_split(X_d2v, y_bow, test_size=0.3, random_state=42, stratify=y_bow)
+X_train_d2v, X_test_d2v, y_train_d2v, y_test_d2v = train_test_split(
+    X_d2v, y_tfidf, test_size=0.3, random_state=42, stratify=y_tfidf
+)
 
 # Huấn luyện với Doc2Vec
 lr_d2v = LogisticRegression(max_iter=1000, C=0.5)
